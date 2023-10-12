@@ -1,0 +1,121 @@
+{% extends 'main/base.html' %}
+
+{% block head %}
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+<style>
+  body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f8f9fa;
+  }
+  .course-details {
+    margin-top: 50px;
+    padding: 30px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  .course-details img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+  }
+  .enrolled-users, .course-progress {
+    margin-top: 20px;
+  }
+  .enrolled-users .card-body, .course-progress .card-body {
+    padding: 15px;
+  }
+</style>
+{% endblock %}
+
+{% block title %}
+{{ course.name }}
+{% endblock %}
+
+{% block content %}
+<div class="container course-details">
+  <div class="row">
+    <div class="col-md-8">
+      <h1 class="display-4">{{ course.name }}</h1>
+      <p class="lead text-muted">{{ course.organization.profile.name }}</p>
+      <p>Created by: {{ course.teacher.profile.name }}</p>
+      <p>
+        Tags:
+        {% for tag in course.tags.all %}
+          <span class="badge badge-secondary">{{ tag.name }}</span>
+        {% endfor %}
+      </p>
+      <p>Created at: {{ course.created_at }}</p>
+      <p>Last updated: {{ course.updated_at }}</p>
+      <p>Price: ${{ course.price }}</p>
+      <p>{{ course.small_description }}</p>
+      <hr />
+      <img src="{{ course.image_course.url }}" class="img-fluid mb-4" alt="Course Image" />
+      <h3 class="mb-3">Description</h3>
+      <div class="lead">{{ course.description|safe }}</div>
+      <h3 class="mb-3">What you'll learn</h3>
+      <div>{{ course.learned|safe }}</div>
+    </div>
+    <div class="col-md-4">
+      <div class="card enrolled-users">
+        <div class="card-header bg-primary text-white">Enrolled Users</div>
+        <div class="card-body">
+          {% for enrollment in course.enrollment_set.all %}
+            <p>{{ enrollment.user.profile.name }}</p>
+          {% empty %}
+            <p>No enrollments yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="card mt-4 course-progress">
+        <div class="card-header bg-success text-white">Course Progress</div>
+        <div class="card-body">
+          <p>Ratings: {{ course.rating }}</p>
+          <p>Total number of videos: {{ course.videos }}</p>
+          <p>Total video hours: {{ course.vidoes_time }}</p>
+          <p>Total number of modules: {{ course.modules }}</p>
+          <p>Total number of enrolled users: {{ course.enroller_user.count }}</p>
+          {% with courseprogress=course.courseprogress %}
+            <p>Progress: {{ courseprogress.number_of_videos_watched }}/{{ courseprogress.total_number_of_videos }} ({{ courseprogress.total_progress_percent }}%)</p>
+          {% endwith %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% if profile.status == 'Student' %}
+  {% if request.user.is_authenticated %}
+  {% if request.user in course.enroller_user.all %}
+      <div class="col-md-8 mt-4">
+          <a href="{% url 'courseviewpage' course.id %}" class="btn btn-primary">Go to Course</a>
+      </div>
+  {% else %}
+      <div class="col-md-8 mt-4">
+          <a href="{% url 'enroll_course' course.id %}" class="btn btn-success">Enroll Now</a>
+      </div>
+  {% endif %}
+  {% else %}
+      <div class="col-md-8 mt-4">
+          <a href="{% url 'login' %}" class="btn btn-primary">Log in to Enroll</a>
+      </div>
+  {% endif %}
+  {% elif profile.status == 'Teacher' %}
+  <div class="row mt-4">
+    <div class="col-md-8">
+      <a href="{% url 'update_course' course.id %}" class="btn btn-warning">Update Course</a>
+      <a href="{% url 'analytic' %}" class="btn btn-info">Analytics</a>
+      <a href="{% url 'delete_course' course.id %}" class="btn btn-danger">Delete Course</a>
+    </div>
+    <div class="col-md-4">
+      <a href="{% url 'create_module' course.id %}" class="btn btn-success">Create Module</a>
+      <a href="{% url 'course_modules' course.id %}" class="btn btn-primary">Detailed Module</a>
+    </div>
+  </div>
+  {% endif %}
+  {% if not request.user.is_authenticated %}
+  <div class="col-md-8 mt-4">
+    <a href="{% url 'login' %}" class="btn btn-primary">Log in to Enroll</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
