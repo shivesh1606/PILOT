@@ -30,7 +30,7 @@
     margin-bottom: 20px;
   }
 
-  .quesBox input[type="checkbox"] {
+  .quesBox input[type="radio"] {
     margin-right: 10px;
   }
 
@@ -44,39 +44,25 @@
     cursor: pointer;
     text-align: center;
   }
-  /* Base styles */
-.button {
-  display: inline-block;
-  padding: 10px 20px;
-  font-size: 16px;
-  font-weight: bold;
-  text-align: center;
-  text-decoration: none;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
 
-/* Primary button */
-.button-primary {
-  background-color: #008cba;
-  color: #fff;
-}
+  .loader {
+    border: 16px solid #f3f3f3;
+    border-top: 16px solid #3498db;
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    animation: spin 2s linear infinite;
+    display: inline-block;
+    margin: 20px auto;
+  }
 
-/* Secondary button */
-.button-secondary {
-  background-color: #f0f0f0;
-  color: #333;
-}
-
-/* Hover effect */
-.button:hover {
-  opacity: 0.8;
-}
-
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 </style>
-
 {% endblock %}
+
 {% block coursecontent %}
 <div class="video-player" style="display:flex; justify-content:center; padding:15px 10px">
   <video
@@ -91,15 +77,15 @@
   </video>
 
   {% if questions %}
-  <form class="hide quesForm" id="ques">
+  <form class="hide quesForm" id="ques" action={% url 'submit_quiz' %} method="POST" data-quiz-id="{{ quiz.id }}" >
     <h1 style="text-align:center">Quiz Time!</h1>  
     {% csrf_token %} 
     {% for question in questions %}
-    <div class="quesBox">
+    <div class="quesBox" name="{{question.id}}[]">
       <p style="align-items:left;">Question. {{ question.text }}</p>
       {% for answer in question.answer_set.all %}
       <input
-        type="checkbox"
+        type="radio"
         name="{{ question.id }}[]"
         value="{{ answer.id }}"
       />{{ answer.text }} {% endfor %}
@@ -109,13 +95,12 @@
     <br>
     <button id="sub" type="submit" class="submit-btn button button-primary" style="position:absolute; left:auto; right:50%">Submit</button>
   </form>
-
-  {% endif %}
-  <div class="hide results" id="results">
+  <div class="loader hide" id="loader"></div>
+  <div class="results hide" id="results">
     <h2>Quiz Results</h2>
     {% if quiz %}
       <p>Passing Score: {{ quiz.pass_mark }}</p>
-      <p>Score: {{ score }}</p>
+      <p id="quizScore"></p>
       {% if passed %}
         <p>You passed the quiz!</p>
       {% else %}
@@ -125,15 +110,16 @@
       <p>No quiz for this video.</p>
     {% endif %}
   </div>
+  {% endif %}
 </div>
+{% endblock %}
 
-{% endblock %} 
 {% block scriptjs %}
 <script>
   var start_time = 0;
   console.log({{ quiz|length }})
   {% if quiz %}
-  start_time = {{ quiz.start_time }};
+  {% comment %} start_time = "{{ quiz.start_time }}"; {% endcomment %}
   console.log("quiz exists");
  {% endif %}
   console.log(start_time);
@@ -159,28 +145,71 @@
     }
   }; 
   vid.addEventListener("timeupdate", pausing_function);
-  ques.addEventListener("submit", (event) => {
-    event.preventDefault();
-    var formdata = new FormData(event.target);
-    fetch(event.target.action, {
-      method: event.target.method,
-      body: formdata,
-    }).then((response) => {
-      if (response.ok) {
-        return response.json();
-      } else {
-        throw new Error("Network response was not ok.");
+  
+  async function retrieveFormData() {
+    const formData = new FormData();
+    const form = document.querySelector('.quesForm');
+    formData.quiz_id = form.dataset.quizId;
+    formData.selected_answers = [];
+    formData.question_ids = [];
+
+    const answerRadios = form.querySelectorAll('input[type="radio"]:checked');
+    answerRadios.forEach(radio => {
+      if(radio.value == null || radio.value == undefined || radio.value == ""){
+        formData.append('selected_answers[]', "0");  
       }
-    }).then((data) => {
-      console.log(data);
-      var score = data.score;
-      var passed = data.passed;
-      results.classList.remove("hide");
-      results.classList.add("show");
-      vid.play();
-    }).catch((error) => {
-      console.error("Error submitting form:", error);
+      else 
+        formData.append('selected_answers[]', radio.value);
+      formData.append('question_ids', radio.name);
     });
+  
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  
+    await fetch(form.action, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': csrftoken
+      },
+    })
+    .then(response => response.json())
+    .then(data => {
+      form.classList.add('hide');
+      form.classList.remove('show');
+      console.log(data);
+      document.getElementById("quizScore").innerHTML = "Score: " + data.score ;
+      {% comment %} results.classList.add('show');
+      results.classList.remove('hide'); {% endcomment %}
+      alert("Score: " + data.score);
+      console.log('Retrieved response:', data);
+    })
+  
+    console.log('Retrieved form data:', formData);
+  }
+  
+  const form = document.querySelector('.quesForm');
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    retrieveFormData();
   });
+    function displayToast(data) {
+    const toastContainer = document.createElement('div');
+    toastContainer.classList.add('toast-container');
+    const toast = document.createElement('div');
+    toast.classList.add('toast');
+    if (data.passed) {
+      toast.innerText = 'Congratulations! You passed the quiz.';
+      toast.classList.add('success');
+    } else {
+      toast.innerText = 'Sorry, you did not pass the quiz.';
+      toast.classList.add('error');
+    }
+    toastContainer.appendChild(toast);
+    document.body.appendChild(toastContainer);
+    
+    setTimeout(() => {
+      toastContainer.remove();
+    }, 5000);
+  }
 </script>
 {% endblock %}

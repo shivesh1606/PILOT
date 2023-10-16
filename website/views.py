@@ -63,38 +63,65 @@ def courseviewpagevideo(request, course_id, video_id):
         quiz = Quiz.objects.filter(video=video).first()
         print(quiz.start_time)
         questions = quiz.question_set.all() if quiz else []
-        return render(request, 'website/courseviewvideo.html', {'course': course, 'video': video, 'questions': questions,quiz:"quiz"})
+        print(quiz.id)
+        return render(request, 'website/courseviewvideo.html', {'course': course, 'video': video, 'questions': questions,"quiz":quiz})
     else:
         return redirect('course_detail', course_id=course.id)
 
 
-
+import json
+from django.http import JsonResponse
 def submit_quiz(request):
+    
     if request.method == 'POST':
+        # Retrieve data from the POST request
+        print("Something")
+        print(request)
         quiz_id = request.POST.get('quiz_id')
-        question_ids = request.POST.getlist('question_ids[]')
-        answer_ids = request.POST.getlist('answer_ids[]')
+        selected_answers = request.POST.getlist('selected_answers[]')
+        question_ids = request.POST.getlist('question_ids')
+        score=0
+        for index,id in enumerate(question_ids):
+            id=id.strip('[]')
+            question=Question.objects.get(id=id)
+            if selected_answers[index] is not 0:
+                answer = Answer.objects.get(id=selected_answers[index])
+                if answer.is_correct:
+                    score += 1
+        # Process the data (here we're just printing it)
+        print('Quiz ID:', quiz_id)
+        print('Selected Answers:', selected_answers)
+        
+        # You can process the data further, update the database, etc.
 
-        # Do something with the form data, for example:
-        quiz = Quiz.objects.get(id=quiz_id)
-        total_marks = 0
-        obtained_marks = 0
-        for question_id, answer_id in zip(question_ids, answer_ids):
-            question = Question.objects.get(id=question_id)
-            answer = Answer.objects.get(id=answer_id)
-            if answer.is_correct:
-                obtained_marks += question.marks
-            total_marks += question.marks
-        percentage = obtained_marks / total_marks * 100
-        if percentage >= quiz.pass_percentage:
-            message = 'Congratulations! You passed the quiz with a score of {}%.'.format(round(percentage))
-        else:
-            message = 'Sorry, you failed the quiz with a score of {}%.'.format(round(percentage))
-        return redirect('quiz_result', quiz_id=quiz_id, message=message)
+        # Return a JSON response (replace with your actual response)
+        response_data = {
+            'message': 'Quiz submitted successfully',
+            'score': score
+        }
+    # if request.method == 'POST':
+    #     quiz_id = request.POST.get('quiz_id')
+    #     question_ids = request.POST.getlist('question_ids[]')
+    #     answer_ids = request.POST.getlist('answer_ids[]')
+
+    #     # Do something with the form data, for example:
+    #     quiz = Quiz.objects.get(id=quiz_id)
+    #     total_marks = 0
+    #     obtained_marks = 0
+    #     for question_id, answer_id in zip(question_ids, answer_ids):
+    #         question = Question.objects.get(id=question_id)
+    #         answer = Answer.objects.get(id=answer_id)
+    #         if answer.is_correct:
+    #             obtained_marks += question.marks
+    #         total_marks += question.marks
+    #     percentage = obtained_marks / total_marks * 100
+    #     if percentage >= quiz.pass_percentage:
+    #         message = 'Congratulations! You passed the quiz with a score of {}%.'.format(round(percentage))
+    #     else:
+    #         message = 'Sorry, you failed the quiz with a score of {}%.'.format(round(percentage))
+        return JsonResponse(response_data)
     else:
         return redirect('home')
-
-
 
 def courseviewpagenote(request, course_id, note_id):
     course = get_object_or_404(Course, id=course_id)

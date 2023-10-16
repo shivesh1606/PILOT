@@ -170,6 +170,8 @@ class Answer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     text = models.CharField(max_length=1000)
     is_correct = models.BooleanField(default=False)
+    def __str__(self):
+        return self.question.text + " - " + self.text + " - " + str(self.is_correct)
 
 class Monitor(models.Model):
     user=models.OneToOneField(User, on_delete=models.CASCADE,null=True,blank=True)
