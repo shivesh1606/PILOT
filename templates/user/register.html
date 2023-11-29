@@ -67,6 +67,15 @@
             />
           </div>
           <div class="mb-1">
+            <label for="status" class="form-label text-danger"
+              >Status*</label>
+            <select class="form-select" id="status" name="status" required>
+              <option value="Student">Student</option>
+              <option value="Teacher">Teacher</option>
+              <option value="Organization">Organization</option>
+            </select>
+          </div>
+          <div class="mb-1">
             <label for="password" class="form-label text-danger"
               >Password*</label
             >
@@ -94,7 +103,22 @@
               required
             />
           </div>
-          <button type="submit" class="btn btn-danger mb-2">Sign Up</button>
+          <button type="button" id="sendOtpButton" class="btn btn-primary mb-2" onclick="sendOtp()">
+            Send OTP
+          </button>
+          <div class="mb-1" id="otpField" style="display: none">
+            <label for="otp" class="form-label text-danger"
+              >OTP*</label
+            >
+            <input
+              type="text"
+              class="form-control"
+              id="otp"
+              name="otp"
+              required
+            />
+          </div>
+          <button type="submit" id="submitBtn" class="btn btn-danger mb-2" disabled>Sign Up</button>
         </form>
       </div>
     </div>
@@ -130,5 +154,37 @@
 
   password.onkeyup = validatePassword;
   confirmPassword.onkeyup = validateConfirmPassword;
+
+  function sendOtp() {
+    // alert("OTP sent successfully");
+    var email = document.getElementById("email").value;
+    if (email.length == 0) {
+      alert("Please enter email address");
+      return;
+    }
+    fetch("{% url 'register' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}",
+      },
+      body: JSON.stringify({ 'email': email }),
+    })
+      .then((response) => response.json())
+      .then(data => {
+        // if (data["status"] == "success") {
+          alert("OTP sent successfully");
+          document.getElementById("sendOtpButton").disabled = true;
+          document.getElementById("submitBtn").disabled = false;
+          document.getElementById("otpField").style.display = "block";
+        // } else {
+        //   alert("Error sending OTP");
+        // }
+      })
+      .catch((error) => {
+        console.log("Error:", error);
+        alert("Error sending OTP");
+      });
+  }
 </script>
 {% endblock %}

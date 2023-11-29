@@ -3,9 +3,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.mail import send_mail
 from .models import Profile
 from django.contrib import messages
+from django.http import JsonResponse
 from .models import Teacher, Student, Organization
+import random
+import json
 
 
 def coursebase(request):
@@ -41,39 +45,93 @@ def logoutUser(request):
     logout(request)
     return redirect('index')
 
+def generate_otp():
+    new_otp = random.randint(100000, 999999)
+    return new_otp
+
 def registerUser(request):
     page='signup'
     if (request.user.is_authenticated):
         return redirect('index')
     else:
         if request.method == 'POST':
-            username = request.POST.get('name')
-            email = request.POST.get('email')
-            phone = request.POST.get('phone')
-            pwd = request.POST.get('password')
-            cnfrm_pwd = request.POST.get('confirmpassword')
-            try:
-                if pwd == cnfrm_pwd:
-                    profile=Profile.objects.filter(email=email)
-                    user=User.objects.filter(email=email)
+            if 'otp' in request.POST:
+                print("here with otp")
+                otp = request.POST.get('otp')
+                session_otp = request.session.get('otp')
+                if str(session_otp) == otp:
+                    try:
+                        username = request.POST.get('name')
+                        email = request.POST.get('email')
+                        phone = request.POST.get('phone')
+                        status = request.POST.get('status')
+                        pwd = request.POST.get('password')
+                        cnfrm_pwd = request.POST.get('confirmpassword')
+                        if pwd == cnfrm_pwd:
+                            profile=Profile.objects.filter(email=email)
+                            user=User.objects.filter(email=email)
 
-                    if not user.exists():
-                        user=User.objects.create_user(username=email,email=email)
-                        user.set_password(pwd)
-                        profile=Profile.objects.create(user=user,name=username,email=email,phone=phone)
-                        student=Student.objects.create(profile=profile)
-                        user.save()
-                        profile.save()
-                        student.save()
-                        login(request, user)
-                        return redirect('index')
-                    else:
-                        return render(request, 'user/register.html',{"msg": "User already exists"})
+                            if not user.exists():
+                                user=User.objects.create_user(username=email,email=email)
+                                user.set_password(pwd)
+                                profile=Profile.objects.create(user=user,name=username,email=email,phone=phone, status=status)
+                                # student=Student.objects.create(profile=profile)
+                                user.save()
+                                profile.save()
+                                # student.save()
+                                if status=='Student':
+                                    student=Student.objects.create(profile=profile)
+                                    student.save()
+                                elif status=='Teacher':
+                                    teacher=Teacher.objects.create(profile=profile)
+                                    teacher.save()
+                                elif status=='Organization':
+                                    organization=Organization.objects.create(profile=profile)
+                                    organization.save()
+                                login(request, user)
+                                return redirect('index')
+                            else:
+                                return render(request, 'user/register.html',{"msg": "User already exists"})
+                        else:
+                            return render(request, 'user/register.html',{ "msg":"Confirm Password is not equal to Password" }) 
+                        
+                    except Exception as e:
+                        return HttpResponse(e)
                 else:
-                    return render(request, 'user/register.html',{ "msg":"Confirm Password is not equal to Password" }) 
-                   
-            except Exception as e:
-                return HttpResponse(e)
+                    return render(request, 'user/register.html',{"msg": "OTP is incorrect"})
+            else:
+                username = request.POST.get('name')
+                # email = request.POST.get('email')
+                phone = request.POST.get('phone')
+                status = request.POST.get('status')
+                pwd = request.POST.get('password')
+                cnfrm_pwd = request.POST.get('confirmpassword')
+                if pwd == cnfrm_pwd:
+                    print("here to generate otp")
+                    otp = generate_otp()
+                    data = json.loads(request.body)
+                    email = data.get('email')
+                    request.session['otp'] = otp
+                    request.session['email'] = email
+                    request.session['username'] = username
+                    request.session['phone'] = phone
+                    request.session['status'] = status
+                    request.session['password'] = pwd
+                    print("email:", email)
+                    print(f"the otp is {otp}")
+                    try:
+                        send_mail(
+                            'OTP Verification',
+                            f'Your OTP is {otp}',
+                            'pilotlms.kgp@gmail.com',
+                            [email],
+                            fail_silently=False,
+                        )
+                        print("otp sent ig")
+                    except Exception as e:
+                        print("otp not sent", e)
+                    # return render(request, 'user/register.html',{"status": "success"})
+                    return JsonResponse({"status": "success"})
         return render(request, 'user/register.html')        
 
 
