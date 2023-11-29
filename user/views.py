@@ -268,3 +268,63 @@ def profile_detail(request, profile_id):
     return render(request, 'user/user_details.html', context)    
 
 
+def reset_password(request):
+    page = 'reset_password'
+    if request.user.is_authenticated:
+        return redirect('index')
+    
+    if request.method == 'POST':
+        # email = request.POST.get('email')
+        # data = json.loads(request.body)
+        # email = data.get('email')
+        # print('email', email)
+        try:
+            if 'otp' in request.POST:
+                otp = request.POST.get('otp')
+                print("otp", otp)
+                print("otp in session", request.session['otp'])
+                if otp == str(request.session['otp']):
+                    password = request.POST.get('password')
+                    confirm_password = request.POST.get('confirmpassword')
+                    if password == confirm_password:
+                        email = request.POST.get('email')
+                        print("here", email)
+                        user = User.objects.get(email=email)
+                        user.set_password(password)
+                        user.save()
+                        print("success password")
+                        messages.success(request, "Password reset successful")
+                        return redirect('login')
+                    else:
+                        print("wrong pass")
+                        messages.error(request, "Passwords don't match")
+                        return render(request, 'user/reset_password.html', {'page': page})
+                    # return JsonResponse({'status': 'success'})
+                else:
+                    return JsonResponse({'status': 'fail'})
+            else:
+                otp = generate_otp()
+                data = json.loads(request.body)
+                email = data.get('email')
+                print('email', email)
+                request.session['otp'] = otp
+                request.session['email'] = email
+                try:
+                    send_mail(
+                        'OTP Verification',
+                        f'Your OTP is {otp}',
+                        'pilotlms.kgp@gmail.com',
+                        [email],
+                        fail_silently=False,
+                    )
+                    print("otp sent", otp)
+                    return JsonResponse({'status': 'success'})
+                except Exception as e:
+                    print("otp not sent", e)
+                    return JsonResponse({'status': 'fail'})
+        except User.DoesNotExist:
+            print("user does not exist")
+            messages.error(request, "User does not exist")
+            return render(request, 'user/reset_password.html', {'page': page})
+    return render(request, 'user/reset_password.html', {'page': page})
+
