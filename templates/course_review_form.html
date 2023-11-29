@@ -1,0 +1,63 @@
+<!-- course_review_form.html -->
+
+{% extends 'main/base.html' %}
+
+{% block title %}
+Review and Rate: {{ course.name }}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="display-4 mb-4 text-center">Give us your Reviews and Rating for the course: {{ course.name }}</h1>
+
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <form method="post" action="{% url 'course_review' course.id %}" id="reviewForm">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary" id="submitReviewBtn">Submit Review</button>
+      </form>
+
+      <!-- Success alert -->
+      <div class="alert alert-success mt-3" role="alert" id="successAlert" style="display: none;">
+        Review submitted successfully!
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var reviewForm = document.getElementById('reviewForm');
+    var successAlert = document.getElementById('successAlert');
+    var submitReviewBtn = document.getElementById('submitReviewBtn');
+
+    reviewForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+
+      // Serialize the form data
+      var formData = new FormData(reviewForm);
+
+      // Make an AJAX request using the Fetch API
+      fetch('{% url "course_review" course.id %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}', // Include CSRF token in the request headers
+        },
+      })
+      .then(response => response.json())  // Assuming the server returns JSON data
+      .then(data => {
+        // Handle the response from the server
+        successAlert.style.display = 'block';
+        reviewForm.style.display = 'none';
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        // Handle the error
+      });
+    });
+  });
+</script>
+
+{% endblock %}

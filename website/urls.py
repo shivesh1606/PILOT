@@ -7,8 +7,10 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('',views.index,name='index'),
     path('contact/',views.contact,name='contact'),
+    path('contact_form/',views.contact_form,name='contact_form'),
     path('create_course',views.create_course,name='create_course'),
     path('course/<int:course_id>/', views.course_detail, name='course_detail'),
+    path('course/<int:course_id>/review/', views.course_review, name='course_review'),
     path('<int:course_id>/update/', views.update_course, name='update_course'),
     path('<int:course_id>/delete/', views.delete_course, name='delete_course'),
     path('course/', views.course, name='course'),

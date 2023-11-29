@@ -10,6 +10,13 @@ import subprocess
 
 class Tags(models.Model):
     name=models.CharField(max_length=2000,blank=True, null=True)
+
+class Contact_us(models.Model):
+    name = models.CharField(max_length=122)
+    email = models.CharField(max_length=122)
+    desc = models.CharField(max_length=100, default=timezone.now)
+    date = models.DateField()
+
     
 class Course(models.Model):
     name = models.CharField(max_length=2000,blank=True,null=True)
@@ -28,6 +35,8 @@ class Course(models.Model):
     total_video=models.IntegerField(null=True, blank = True)
     vidoes_time=models.CharField(max_length=2000,null=True, blank = True)
     total_module=models.IntegerField(blank=True, null=True, default=0)
+    # reviews = models.ManyToManyField(User, through='Review')
+    # ratings = models.DecimalField(max_digits=3, decimal_places=2, default=0.0)
     # def save(self, *args, **kwargs):
     #     self.total_video = Video.objects.filter(module=self).count()
     #     time = sum([video.duration for video in Video.objects.filter(module=self)])
@@ -36,7 +45,15 @@ class Course(models.Model):
     def __str__(self):
         return self.name
 
+class Review(models.Model):
+    course = models.ForeignKey('Course', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    rating = models.PositiveIntegerField()
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f"{self.user.username}'s review for {self.course.name}"
 
 class Enrollment(models.Model):
     course = models.ForeignKey(Course, related_name="enrollments",on_delete=models.CASCADE)

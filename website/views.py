@@ -3,8 +3,9 @@ from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from .forms import ReviewForm
 from django.utils import timezone
-from .models import Course, Module, Video, Comment, SubComment, Notes,Monitor, Tags, Quiz, Question, Answer, Enrollment
+from .models import Contact_us, Course, Review, Module, Video, Comment, SubComment, Notes,Monitor, Tags, Quiz, Question, Answer, Enrollment
 from user.models import Profile, Student, Organization, Teacher
 from datetime import datetime, timedelta
 from django.contrib.gis.geoip2 import GeoIP2
@@ -24,6 +25,26 @@ def index(request):
     }
     return render(request, 'website/home.html', context)
 
+#review form
+def course_review(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.course = course
+            review.user = request.user  # Assuming you have user authentication in place
+            review.save()
+
+            # You can add additional logic here if needed
+
+            # Send a JSON response to indicate success
+            return JsonResponse({'status': 'success'})
+    else:
+        form = ReviewForm()
+
+    return render(request, 'course_review_form.html', {'course': course, 'form': form})
 
 def allcourses(request):
     courses = Course.objects.all()
@@ -37,6 +58,21 @@ def allcourses(request):
 
 def contact(request):   
     return render(request, 'website/contact.html')
+
+def contact_form(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        desc = request.POST.get('desc')
+        contact_us = Contact_us(name=name, email=email, desc=desc, date=datetime.today())
+        contact_us.save()
+        
+        success_message = "Form submitted successfully!"
+        
+        return render(request, 'website/contact_form.html', {'success_message': success_message})
+
+    return render(request, 'website/contact_form.html')
+
 
 def courseviewpage(request, course_id):
     course = get_object_or_404(Course, id=course_id)
@@ -121,7 +157,7 @@ def submit_quiz(request):
     #         message = 'Sorry, you failed the quiz with a score of {}%.'.format(round(percentage))
         return JsonResponse(response_data)
     else:
-        return redirect('home')
+        return redirect('/')
 
 def courseviewpagenote(request, course_id, note_id):
     course = get_object_or_404(Course, id=course_id)
