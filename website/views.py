@@ -97,7 +97,12 @@ def courseviewpagevideo(request, course_id, video_id):
             is_enrolled = True
     if is_enrolled:
         quiz = Quiz.objects.filter(video=video).first()
-        print(quiz.start_time)
+        questions=[]
+        if quiz:
+            print(quiz.start_time)
+            questions = quiz.question_set.all() if quiz else []
+            print(quiz.id)
+        # print(quiz.start_time)
         questions = quiz.question_set.all() if quiz else []
         print(quiz.id)
         return render(request, 'website/courseviewvideo.html', {'course': course, 'video': video, 'questions': questions,"quiz":quiz})

@@ -117,9 +117,13 @@
 {% block scriptjs %}
 <script>
   var start_time = 0;
+  var quiz_complete=false;
   console.log({{ quiz|length }})
   {% if quiz %}
-  {% comment %} start_time = "{{ quiz.start_time }}"; {% endcomment %}
+  start_time = "{{ quiz.start_time }}";
+  {% comment %} Parse the start_time string to time format {% endcomment %}
+  start_time = start_time.split(":");
+  start_time = parseInt(start_time[0])*60 + parseInt(start_time[1]);
   console.log("quiz exists");
  {% endif %}
   console.log(start_time);
@@ -137,7 +141,7 @@
     vid.pause();
   }
   var pausing_function = function (){
-    if (this.currentTime >= start_time){
+    if (this.currentTime >= start_time && quiz_complete==false){
       this.pause();
       ques.classList.add("show");
       ques.classList.remove("hide");
@@ -190,6 +194,7 @@
   const form = document.querySelector('.quesForm');
   form.addEventListener('submit', (event) => {
     event.preventDefault();
+    quiz_complete=true;
     retrieveFormData();
   });
     function displayToast(data) {

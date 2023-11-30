@@ -4,6 +4,7 @@ db.sqlite3
 node_modules/
 dist/
 env/
+venv/
 */__pycache__ 
 */migrations
 staticfiles/
